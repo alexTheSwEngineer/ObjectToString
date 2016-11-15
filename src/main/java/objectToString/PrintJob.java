@@ -32,19 +32,19 @@ public class PrintJob<T> {
     private Consumer<Property<T>> after;
 
 
-    public PrintJob<T> beforeAll(Consumer<Property<T>> before) {
+    public PrintJob<T> beforeAll(Consumer<Property<T>> before)throws Exception {
         PrintJob<T> res = new PrintJob<>(this);
         res.before=PrintJob.DefaultIfNull(before);
         return  res;
     }
 
-    public PrintJob<T> printEach(Consumer<Property<T>> print) {
+    public PrintJob<T> printEach(Consumer<Property<T>> print) throws Exception{
         PrintJob<T> res = new PrintJob<>(this);
         res.print=PrintJob.DefaultIfNull(print);
         return  res;
     }
 
-    public PrintJob<T> between(BiConsumer<Property<T>, Property<T>> between) {
+    public PrintJob<T> between(BiConsumer<Property<T>, Property<T>> between) throws Exception{
         if(between==null){
             this.between= PrintJob::NOP;
         }else {
@@ -54,7 +54,7 @@ public class PrintJob<T> {
         return this;
     }
 
-    public PrintJob<T> afterAll(Consumer<Property<T>> after) {
+    public PrintJob<T> afterAll(Consumer<Property<T>> after) throws Exception{
         PrintJob<T> res = new PrintJob<>(this);
         res.after=PrintJob.DefaultIfNull(after);
         return  res;
