@@ -3,7 +3,6 @@ package batchJob;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -12,31 +11,47 @@ import java.util.stream.Stream;
  */
 public class BatchJob<TSource, TSourceTransform,TParam> {
     private List<Function<TSource, TSourceTransform>> actions;
-    private BiConsumer<TSourceTransform,TParam> before;
+    private BiConsumer<TSourceTransform,TParam> first;
+    private BiConsumer<TSourceTransform,TParam> beforeAll;
+    private BiConsumer<TSourceTransform,TParam> afterAll;
     private BiConsumer<TSourceTransform,TParam> apply;
     private TriConsumer<TSourceTransform, TSourceTransform,TParam> between;
-    private BiConsumer<TSourceTransform,TParam> after;
+    private BiConsumer<TSourceTransform,TParam> last;
 
     public BatchJob(List<Function<TSource, TSourceTransform>> actions){
         this.actions = actions;
-        before= BatchJob::NOP;
+        first = BatchJob::NOP;
         apply = BatchJob::NOP;
         between= BatchJob::NOP;
-        after= BatchJob::NOP;
+        beforeAll=BatchJob::NOP;
+        afterAll = BatchJob::NOP;
+        last = BatchJob::NOP;
     }
 
     public BatchJob(BatchJob<TSource, TSourceTransform,TParam> other){
         this(other.actions);
-        this.before=other.before;
+        this.first =other.first;
         this.apply =other.apply;
         this.between=other.between;
-        this.after=other.after;
+        this.last =other.last;
     }
 
 
-    public BatchJob<TSource, TSourceTransform,TParam> beforeAll(BiConsumer<TSourceTransform,TParam> before)throws Exception {
+    public BatchJob<TSource, TSourceTransform,TParam> first(BiConsumer<TSourceTransform,TParam> before)throws Exception {
         BatchJob<TSource, TSourceTransform,TParam> res = new BatchJob<>(this);
-        res.before= BatchJob.DefaultIfNull(before);
+        res.first = BatchJob.DefaultIfNull(before);
+        return  res;
+    }
+
+    public BatchJob<TSource, TSourceTransform,TParam> beforeEach(BiConsumer<TSourceTransform,TParam> before)throws Exception {
+        BatchJob<TSource, TSourceTransform,TParam> res = new BatchJob<>(this);
+        res.beforeAll= BatchJob.DefaultIfNull(before);
+        return  res;
+    }
+
+    public BatchJob<TSource, TSourceTransform,TParam> afterEach(BiConsumer<TSourceTransform,TParam> before)throws Exception {
+        BatchJob<TSource, TSourceTransform,TParam> res = new BatchJob<>(this);
+        res.afterAll= BatchJob.DefaultIfNull(before);
         return  res;
     }
 
@@ -46,7 +61,7 @@ public class BatchJob<TSource, TSourceTransform,TParam> {
         return  res;
     }
 
-    public BatchJob<TSource, TSourceTransform,TParam> between(TriConsumer<TSourceTransform,TSourceTransform,TParam> between) throws Exception{
+    public BatchJob<TSource, TSourceTransform,TParam> betweenEach(TriConsumer<TSourceTransform,TSourceTransform,TParam> between) throws Exception{
         if(between==null){
             this.between= BatchJob::NOP;
         }else {
@@ -55,9 +70,9 @@ public class BatchJob<TSource, TSourceTransform,TParam> {
         return this;
     }
 
-    public BatchJob<TSource, TSourceTransform,TParam> afterAll(BiConsumer<TSourceTransform,TParam> after) throws Exception{
+    public BatchJob<TSource, TSourceTransform,TParam> last(BiConsumer<TSourceTransform,TParam> after) throws Exception{
         BatchJob<TSource, TSourceTransform,TParam> res = new BatchJob<>(this);
-        res.after= BatchJob.DefaultIfNull(after);
+        res.last = BatchJob.DefaultIfNull(after);
         return  res;
     }
 
@@ -69,14 +84,16 @@ public class BatchJob<TSource, TSourceTransform,TParam> {
         for (Function<TSource, TSourceTransform> action:actions) {
             TSourceTransform result = action.apply(obj);
             if(isFirst){
-                before.accept(result,parameter);
+                first.accept(result,parameter);
             }
 
             if(previousAction!=null){
                 between.apply(previousResult,result,parameter);
             }
 
+            beforeAll.accept(result,parameter);
             apply.accept(result,parameter);
+            afterAll.accept(result,parameter);
 
             previousAction=action;
             previousResult = result;
@@ -84,7 +101,7 @@ public class BatchJob<TSource, TSourceTransform,TParam> {
         }
 
         if(!actions.isEmpty()){
-            after.accept(previousResult,parameter);
+            last.accept(previousResult,parameter);
         }
 
         return processed.stream();

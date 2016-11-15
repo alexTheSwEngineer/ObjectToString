@@ -48,8 +48,9 @@ public class PropertyPrintSetting<TSource> {
     public   BatchSettings<TSource,Property> buildSettings(){
         List<PropertyPrintSetting<TSource>> res = new ArrayList<>();
         PropertyPrintSetting<TSource> current = this;
-        while (current.hasPrevious()){
-            res.add(this);
+        while (current!=null){
+            res.add(current);
+            current=current.previous;
         }
         Collections.reverse(res);
         return new BatchSettings<TSource,Property>(res.stream()
@@ -60,11 +61,6 @@ public class PropertyPrintSetting<TSource> {
     public   <TParam> BatchJob<TSource,Property,TParam> buildJob(){
         return buildSettings().<TParam>createJob();
     }
-
-    private boolean hasPrevious() {
-        return previous!=null;
-    }
-
 
     private Function<TSource,Property> mapToProperty(){
         return  x->new Property(name.apply(x),value.apply(x));
