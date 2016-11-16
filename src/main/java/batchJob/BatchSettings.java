@@ -1,5 +1,7 @@
 package batchJob;
 
+import examples.VeryComplexObject;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;

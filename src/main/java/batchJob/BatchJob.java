@@ -10,54 +10,56 @@ import java.util.stream.Stream;
  * Created by atrposki on 11/15/2016.
  */
 public class BatchJob<TSource, TSourceTransform,TParam> {
-    private List<Function<TSource, TSourceTransform>> actions;
-    private BiConsumer<TSourceTransform,TParam> first;
-    private BiConsumer<TSourceTransform,TParam> beforeAll;
-    private BiConsumer<TSourceTransform,TParam> afterAll;
-    private BiConsumer<TSourceTransform,TParam> apply;
+    private List<Function<TSource, TSourceTransform>> transforms;
+    private BiConsumer<TSourceTransform,TParam> beforeFirst;
+    private BiConsumer<TSourceTransform,TParam> beforeEach;
+    private BiConsumer<TSourceTransform,TParam> afterEach;
+    private BiConsumer<TSourceTransform,TParam> applyToEach;
     private TriConsumer<TSourceTransform, TSourceTransform,TParam> between;
     private BiConsumer<TSourceTransform,TParam> last;
 
     public BatchJob(List<Function<TSource, TSourceTransform>> actions){
-        this.actions = actions;
-        first = BatchJob::NOP;
-        apply = BatchJob::NOP;
+        this.transforms = actions;
+        beforeFirst = BatchJob::NOP;
+        applyToEach = BatchJob::NOP;
         between= BatchJob::NOP;
-        beforeAll=BatchJob::NOP;
-        afterAll = BatchJob::NOP;
+        beforeEach =BatchJob::NOP;
+        afterEach = BatchJob::NOP;
         last = BatchJob::NOP;
     }
 
     public BatchJob(BatchJob<TSource, TSourceTransform,TParam> other){
-        this(other.actions);
-        this.first =other.first;
-        this.apply =other.apply;
+        this(other.transforms);
+        this.beforeFirst=other.beforeFirst;
+        this.applyToEach=other.applyToEach;
         this.between=other.between;
-        this.last =other.last;
+        this.beforeEach=other.beforeEach;
+        this.afterEach=other.afterEach;
+        this.last=other.last;
     }
 
 
-    public BatchJob<TSource, TSourceTransform,TParam> first(BiConsumer<TSourceTransform,TParam> before)throws Exception {
+    public BatchJob<TSource, TSourceTransform,TParam> beforeFirst(BiConsumer<TSourceTransform,TParam> before)throws Exception {
         BatchJob<TSource, TSourceTransform,TParam> res = new BatchJob<>(this);
-        res.first = BatchJob.DefaultIfNull(before);
+        res.beforeFirst = BatchJob.DefaultIfNull(before);
         return  res;
     }
 
     public BatchJob<TSource, TSourceTransform,TParam> beforeEach(BiConsumer<TSourceTransform,TParam> before)throws Exception {
         BatchJob<TSource, TSourceTransform,TParam> res = new BatchJob<>(this);
-        res.beforeAll= BatchJob.DefaultIfNull(before);
+        res.beforeEach = BatchJob.DefaultIfNull(before);
         return  res;
     }
 
     public BatchJob<TSource, TSourceTransform,TParam> afterEach(BiConsumer<TSourceTransform,TParam> before)throws Exception {
         BatchJob<TSource, TSourceTransform,TParam> res = new BatchJob<>(this);
-        res.afterAll= BatchJob.DefaultIfNull(before);
+        res.afterEach = BatchJob.DefaultIfNull(before);
         return  res;
     }
 
     public BatchJob<TSource, TSourceTransform,TParam> applyOnEach(BiConsumer<TSourceTransform,TParam> print) throws Exception{
         BatchJob<TSource, TSourceTransform,TParam> res = new BatchJob<>(this);
-        res.apply = BatchJob.DefaultIfNull(print);
+        res.applyToEach = BatchJob.DefaultIfNull(print);
         return  res;
     }
 
@@ -70,7 +72,7 @@ public class BatchJob<TSource, TSourceTransform,TParam> {
         return this;
     }
 
-    public BatchJob<TSource, TSourceTransform,TParam> last(BiConsumer<TSourceTransform,TParam> after) throws Exception{
+    public BatchJob<TSource, TSourceTransform,TParam> afterLast(BiConsumer<TSourceTransform,TParam> after) throws Exception{
         BatchJob<TSource, TSourceTransform,TParam> res = new BatchJob<>(this);
         res.last = BatchJob.DefaultIfNull(after);
         return  res;
@@ -81,26 +83,27 @@ public class BatchJob<TSource, TSourceTransform,TParam> {
         boolean isFirst = true;
         Function<TSource, TSourceTransform> previousAction = null;
         TSourceTransform previousResult = null;
-        for (Function<TSource, TSourceTransform> action:actions) {
+        for (Function<TSource, TSourceTransform> action: transforms) {
             TSourceTransform result = action.apply(obj);
             if(isFirst){
-                first.accept(result,parameter);
+                beforeFirst.accept(result,parameter);
+                isFirst=false;
             }
 
             if(previousAction!=null){
                 between.apply(previousResult,result,parameter);
             }
 
-            beforeAll.accept(result,parameter);
-            apply.accept(result,parameter);
-            afterAll.accept(result,parameter);
+            beforeEach.accept(result,parameter);
+            applyToEach.accept(result,parameter);
+            afterEach.accept(result,parameter);
 
             previousAction=action;
             previousResult = result;
             processed.add(result);
         }
 
-        if(!actions.isEmpty()){
+        if(!transforms.isEmpty()){
             last.accept(previousResult,parameter);
         }
 

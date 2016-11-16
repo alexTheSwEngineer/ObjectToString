@@ -1,12 +1,9 @@
-package printjobs;
+package objectToString;
 
 import batchJob.BatchJob;
 import batchJob.BatchSettings;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -44,18 +41,15 @@ public class PropertyPrintSetting<TSource> {
     public PropertyPrintSetting<TSource> name(String nameStr){
         return name(x->nameStr);
     }
-
     public   BatchSettings<TSource,Property> buildSettings(){
-        List<PropertyPrintSetting<TSource>> res = new ArrayList<>();
+        List<Function<TSource,Property>> res = new LinkedList<>();
         PropertyPrintSetting<TSource> current = this;
         while (current!=null){
-            res.add(current);
+            res.add(current.mapToProperty());
             current=current.previous;
         }
         Collections.reverse(res);
-        return new BatchSettings<TSource,Property>(res.stream()
-           .map(x->mapToProperty())
-           .collect(Collectors.toList()));
+        return new BatchSettings<TSource,Property>(res);
     }
 
     public   <TParam> BatchJob<TSource,Property,TParam> buildJob(){
