@@ -1,11 +1,17 @@
 package examples;
 
-import batchJob.BatchJob;
-import batchJob.BatchSettings;
+import main.batchJob.BatchJobExecution;
+import main.batchJob.JobEnhancements;
+import main.batchJob.interfaces.IBatchAction;
+import main.batchJob.interfaces.IBatchActionExecution;
+import main.common.BatchException;
+import main.itteration.Chain;
+import main.processing.IBreakConsumer;
 import objectToString.Property;
 import objectToString.PropertyPrintSetting;
 
-import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Created by atrposki on 11/15/2016.
@@ -13,25 +19,36 @@ import java.io.PrintStream;
 public class Main {
     public static void main(String[] args) throws Exception {
 
-        BatchSettings<VeryComplexObject, Property> settings = new PropertyPrintSetting<VeryComplexObject>(x -> x.computedProperty())
-                .name(x -> x.computedProperty() + "name is computed property")
-                .create(x -> x.onlyValueNoNamePrinted)
-                .create(x -> x.property)
-                .name("Just property")
-                .create(", ", x -> x.collectionOfStrings())
-                .buildSettings();
-        BatchJob<VeryComplexObject, Property, PrintStream> printJob = settings.<PrintStream>createJob()
-                .beforeFirst((prop, stream) -> stream.println("++++++++++\n"))
-                .beforeEach((prop, stream) -> stream.print("|"))
-                .applyOnEach((prop, stream) -> stream.print(prop.name + ":" + prop.value))
-                .afterEach((prop, stream) -> stream.print("!\n"))
-                .betweenEach((l, r, stream) -> stream.println())
-                .afterLast((prop, stream) -> stream.println("\n++++++++++\n"));
+        Iterable<IBatchAction<VeryComplexObject, Property>> printVeryComplexObject =
+        new PropertyPrintSetting<VeryComplexObject>(x -> x.computedProperty())
+        .name(x->"p1")
+        .property(x->x.computedProperty())
+        .name(x->"p2")
+        .property(x->x.computedProperty())
+        .name(x->"p2")
+        .buildObjectPrintJob();
 
+        final IBreakConsumer<Chain<IBatchActionExecution<VeryComplexObject, Property, IBatchAction<VeryComplexObject, Property>>, BatchException>> settings =
+        new JobEnhancements<VeryComplexObject, Property, IBatchAction<VeryComplexObject, Property>>()
+        .beforeFirst(x ->p(" beforeFirst "))
+        .beforeLast(x->p(" beforeLast "))
+        .beforeEach(x->pl(" beforeEach "))
+        .between((l, r) -> pl("between\n"))
+        .afterEach(x ->pl(x.getResult().toString()+" afterEeach"))
+        .afterFirst(x -> p(" afterFirst"))
+        .afterLast(x -> p(" afterLast"))
+        .onException(x->pl("\n\n\n EXCEPTIOON"))
+        .build();
 
-        StringBuilder sb = new StringBuilder();
-        printJob.execute(new VeryComplexObject(),System.out);
-        printJob.execute(new VeryComplexObject(),new PrintStream("C:\\Users\\atrposki\\file.txt"));
-        System.out.println(sb.toString());
+        new BatchJobExecution<VeryComplexObject,Property,IBatchAction<VeryComplexObject,Property>>(settings,printVeryComplexObject)
+        .execute(new VeryComplexObject());
+
+    }
+
+    private static void  pl(String str){
+        System.out.println(str);
+    }
+    private static  void  p(String str){
+        System.out.print(str);
     }
 }

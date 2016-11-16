@@ -1,7 +1,9 @@
 package objectToString;
 
-import batchJob.BatchJob;
-import batchJob.BatchSettings;
+
+import main.batchJob.interfaces.IBatchAction;
+import main.common.BatchException;
+import main.common.FunctionWithException;
 
 import java.util.*;
 import java.util.function.Function;
@@ -12,8 +14,8 @@ import java.util.stream.Collectors;
  */
 public class PropertyPrintSetting<TSource> {
     PropertyPrintSetting<TSource> previous=null;
-    private Function<TSource,String> name=PropertyPrintSetting::empty;
-    private Function<TSource,String> value=PropertyPrintSetting::empty;
+    public Function<TSource,String> name=PropertyPrintSetting::empty;
+    public Function<TSource,String> value=PropertyPrintSetting::empty;
 
     public PropertyPrintSetting(Function<TSource,String> value) {
         this.value=value;
@@ -24,14 +26,16 @@ public class PropertyPrintSetting<TSource> {
     }
 
 
-    public PropertyPrintSetting<TSource> create(Function<TSource,String> value){
+    public PropertyPrintSetting<TSource> property(Function<TSource,String> value){
         PropertyPrintSetting<TSource> newSetting = new PropertyPrintSetting<TSource>(value);
         newSetting.previous=this;
         return  newSetting;
     }
 
-    public <Q> PropertyPrintSetting<TSource> create(String delimiter,Function<TSource,Collection<Q>> val){
-        return  this.create( fromCollection(delimiter,val));
+
+
+    public <Q> PropertyPrintSetting<TSource> property(String delimiter, Function<TSource,Collection<Q>> val){
+        return  this.property( fromCollection(delimiter,val));
     }
 
     public  PropertyPrintSetting<TSource> name(Function<TSource,String> name){
@@ -41,19 +45,16 @@ public class PropertyPrintSetting<TSource> {
     public PropertyPrintSetting<TSource> name(String nameStr){
         return name(x->nameStr);
     }
-    public   BatchSettings<TSource,Property> buildSettings(){
-        List<Function<TSource,Property>> res = new LinkedList<>();
+
+    public Iterable<IBatchAction<TSource,Property>> buildObjectPrintJob() throws BatchException {
+        List<IBatchAction<TSource,Property>> res = new LinkedList<>();
         PropertyPrintSetting<TSource> current = this;
         while (current!=null){
-            res.add(current.mapToProperty());
+            res.add(current.createAction());
             current=current.previous;
         }
         Collections.reverse(res);
-        return new BatchSettings<TSource,Property>(res);
-    }
-
-    public   <TParam> BatchJob<TSource,Property,TParam> buildJob(){
-        return buildSettings().<TParam>createJob();
+        return res;
     }
 
     private Function<TSource,Property> mapToProperty(){
@@ -67,8 +68,30 @@ public class PropertyPrintSetting<TSource> {
                 .map(x->x.toString())
                 .collect(Collectors.toList()));
     }
-    private static  <Src> String empty(Src source){
-        return "";
+
+    private static <TSource> String empty(TSource source){return "";}
+    private IBatchAction<TSource,Property> createAction(){
+        return  new IBatchAction<TSource, Property>() {
+            @Override
+            public boolean allow(TSource input) {
+                return true;
+            }
+
+            @Override
+            public boolean breakBefore(TSource input) {
+                return false;
+            }
+
+            @Override
+            public boolean breakAfter(TSource input, Property output) {
+                return false;
+            }
+
+            @Override
+            public Property accept(TSource in) throws BatchException {
+                return new Property(name.apply(in),value.apply(in));
+            }
+        };
     }
 
 }
