@@ -13,6 +13,6 @@ public interface IBatchAction<Tin,Tout> extends FunctionWithException<Tin,Tout,B
     boolean breakAfter(Tin input,Tout output);
 
     default String debugInfo(){
-        return "";
+        return this.toString();
     }
 }

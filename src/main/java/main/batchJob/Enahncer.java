@@ -21,9 +21,6 @@ public class Enahncer<Tin,Tout,TAction extends FunctionWithException<Tin,Tout,Ba
     List<FunctionWithException<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>,Boolean,BatchException>> breakAfterConditions=new ArrayList<>();
     BatchConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>> decorator= x->{};
 
-    public Enahncer() {
-
-    }
 
     public Enahncer(String debugInfo) {
         this.debugInfo=debugInfo;

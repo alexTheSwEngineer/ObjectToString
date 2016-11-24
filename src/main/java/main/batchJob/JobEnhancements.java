@@ -126,7 +126,9 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
         return new FunctionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(true)
                 .add(beforeEnhancement())
                 .add(executeEnhancment())
-                .add(afterEnhancement());
+                .add(afterEnhancement())
+                .add(new Enahncer<Tin, Tout, TAction>("BreakAfter")
+                        .breakAfterIf(c->c.get().breakAfterExecc()||c.get().breakBeforeExec()));
     }
 
     private static <Tin,Tout,TAction extends FunctionWithException<Tin,Tout,BatchException>>
@@ -139,7 +141,7 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
 
     private IBreakConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>> skipNotAllowed =
             new FunctionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(true)
-                    .add(enhancer("SkipIfNorAllowed:isPresent")
+                    .add(enhancer("SkipIfNorAllowed")
                         .breakBeforeIf(c->!c.isPresent())
                         .breakBeforeIf(c->!c.get().allowExec())
                         .breakBeforeIf(c->c.get().breakBeforeExec()));
@@ -160,25 +162,26 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
 
     private  IBreakConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>
     executeEnhancment() throws BatchException {
-        return enhancer("Execution enhancer")
-                .when(x->x.get().allowExec())
-                .when(x->!x.get().breakBeforeExec())
-                .act(x->x.get().execute())
-                .breakAfterIf(x->x.get().breakBeforeExec()||x.get().breakAfterExecc());
+        return new Enahncer<Tin, Tout, TAction>("Execution enhancer")
+        .when(x->x.get().allowExec())
+        .when(x->!x.get().breakBeforeExec())
+        .act(x->x.get().execute())
+        .breakBeforeIf(x->x.get().breakBeforeExec())
+        .breakAfterIf(x->x.get().breakBeforeExec()||x.get().breakAfterExecc());
     }
 
     private  IBreakConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>
     afterEnhancement() throws BatchException {
         return new FunctionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(false)
-                .add(skipNotAllowed)
-                .add(enhancer("skipAfterExcution")
-                     .when(c->c.isPresent())
-                     .breakAfterIf(c->c.get().breakAfterExecc()))
-                .add(enhancer("afterall")
-                    .act(c-> getAfterEach().accept(c.get())))
                 .add(enhancer("onException")
                     .when(c->c.get().getException()!=null)
-                    .act(c->onException.accept(c.get())))
+                    .act(c->onException.accept(c.get()))
+                    .breakAfterIf(c->c.get().breakAfterExecc()))
+                .add(enhancer("breakAfter")
+                     .breakAfterIf(c->c.get().breakAfterExecc()))
+                .add(skipNotAllowed)
+                .add(enhancer("afterall")
+                    .act(c-> getAfterEach().accept(c.get())))
                 .add(enhancer("afterFIrst")
                     .when(c->c.isFirst())
                     .act(c-> getAfterFirst().accept(c.get())))
@@ -191,7 +194,8 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
     }
 
     private Enahncer<Tin,Tout,TAction> enhancer(String debugInfo){
-        return  new Enahncer<Tin,Tout,TAction>(debugInfo);
+        return  new Enahncer<Tin,Tout,TAction>(debugInfo)
+                .breakBeforeIf(x->x.get().breakBeforeExec()||!x.get().allowExec());
     }
 
 

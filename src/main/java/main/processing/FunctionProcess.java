@@ -20,7 +20,7 @@ public class FunctionProcess<Tin> implements IBreakConsumer<Tin>
     private boolean breakPropagates = false;
 
     public FunctionProcess(Boolean breakPropagates) {
-
+        this.breakPropagates=breakPropagates;
     }
     public boolean breakBeforeExec() throws BatchException {
         return false;
@@ -31,7 +31,7 @@ public class FunctionProcess<Tin> implements IBreakConsumer<Tin>
     }
 
     public boolean breakAfterExecc() throws BatchException {
-        return shouldBreak;
+        return shouldBreak && breakPropagates;
     }
 
 

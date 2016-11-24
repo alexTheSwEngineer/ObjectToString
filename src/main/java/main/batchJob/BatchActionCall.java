@@ -25,17 +25,17 @@ public class BatchActionCall<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> im
 
     @Override
     public boolean breakBeforeExec() throws BatchException {
-        return action.breakBefore(this.input);
+        return action.breakBefore(this.input)||forceBreak;
     }
 
     @Override
     public boolean allowExec() throws BatchException {
-        return action.allow(this.input);
+        return action.allow(this.input)&&!forceSkip;
     }
 
     @Override
     public boolean breakAfterExecc() throws BatchException {
-        return action.breakAfter(input,output);
+        return action.breakAfter(input,output)||forceBreak;
     }
 
     @Override

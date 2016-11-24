@@ -12,7 +12,7 @@ import main.processing.IStreamableAction;
 
 /**
  *
- * @author Aleksandar
+ *
  */
 public interface IBatchActionExecution<Tin,Tout,TAction extends FunctionWithException<Tin, Tout,BatchException>> extends
         IStreamableAction,
