@@ -62,7 +62,7 @@ public class asd {
                 .afterEach(createConsumer("afterEach"))
                 .afterFirst(createConsumer("afterFirst"))
                 .afterLast(createConsumer("afterLast"))
-                .build();
+                .buildAsEnhancement();
 
         BatchJobExecution.<Iterator<Integer>,String, IBatchAction<Iterator<Integer>,String>>Execute(jobQueue.iterator(),lst.iterator(),settings);
 

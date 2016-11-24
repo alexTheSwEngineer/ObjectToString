@@ -122,13 +122,18 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
         return newJob;
     }
 
-    public IBreakConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>> build() throws BatchException {
+    public IBreakConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>> buildAsEnhancement() throws BatchException {
         return new FunctionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(true)
                 .add(beforeEnhancement())
                 .add(executeEnhancment())
                 .add(afterEnhancement())
                 .add(new Enahncer<Tin, Tout, TAction>("BreakAfter")
                         .breakAfterIf(c->c.get().breakAfterExecc()||c.get().breakBeforeExec()));
+    }
+
+    public JobEnhancements<Tin,Tout,TAction> execute(Iterable<TAction> actions,Tin input) throws BatchException {
+          BatchJobExecution.Execute(actions.iterator(),input,buildAsEnhancement());
+        return this;
     }
 
     private static <Tin,Tout,TAction extends FunctionWithException<Tin,Tout,BatchException>>

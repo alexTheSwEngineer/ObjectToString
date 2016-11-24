@@ -7,7 +7,6 @@ import main.common.BatchException;
 import main.common.FunctionWithException;
 
 import java.util.ArrayList;
-import java.util.function.Function;
 
 /**
  * Created by atrposki on 24-Nov-16.
@@ -48,7 +47,7 @@ public class TestCase {
         return this;
     }
 
-    public <TEx extends Exception>  TestCase add(FunctionWithException<StringBuilder,SimpleBatchAction<Integer,String>,TEx> actionProducer) throws TEx{
+    public <TEx extends Exception>  TestCase add(FunctionWithException<StringBuilder,SimpleBatchAction<Integer,String>,TEx> actionProducer) throws TEx, BatchException {
         actions.add(actionProducer.accept(this.sb));
         return this;
     }
@@ -74,12 +73,12 @@ public class TestCase {
     public String toString(){
         return  this.description;
     }
-    public <TEx extends Exception>  TestCase withEnhancements(FunctionWithException<StringBuilder,JobEnhancements<Integer,String,SimpleBatchAction<Integer,String>>,TEx> producer) throws TEx{
+    public <TEx extends Exception>  TestCase withEnhancements(FunctionWithException<StringBuilder,JobEnhancements<Integer,String,SimpleBatchAction<Integer,String>>,TEx> producer) throws TEx, BatchException {
         this.enhancements = producer.accept(this.sb);
         return this;
     }
 
-    public void run(JobEnhancements<Integer,String,SimpleBatchAction<Integer,String>> settings) throws BatchException {
-        BatchJobExecution.<Integer,String,SimpleBatchAction<Integer,String>>Execute(actions.iterator(),input,settings.build());
+    public void run() throws BatchException {
+        BatchJobExecution.<Integer,String,SimpleBatchAction<Integer,String>>Execute(actions.iterator(),input,enhancements.buildAsEnhancement());
     }
 }

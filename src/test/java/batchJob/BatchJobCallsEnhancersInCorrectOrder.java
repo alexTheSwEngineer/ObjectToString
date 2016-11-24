@@ -4,6 +4,7 @@ import main.batchJob.JobEnhancements;
 import main.batchJob.SimpleBatchAction;
 import main.common.BatchException;
 import org.junit.Assert;
+import org.junit.Test;
 import org.junit.experimental.theories.DataPoint;
 import org.junit.experimental.theories.DataPoints;
 import org.junit.experimental.theories.Theories;
@@ -11,6 +12,7 @@ import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
+import java.util.StringJoiner;
 import java.util.stream.Collector;
 
 import static batchJob.Constants.AFTER_EACH;
@@ -52,15 +54,18 @@ public class BatchJobCallsEnhancersInCorrectOrder {
 
     @Theory
     public void runTest(TestCase testCase) throws BatchException {
-        testCase.run(createWithDefault(testCase.getSb()));
+        testCase.run();
         Assert.assertEquals(testCase.toString(),testCase.getExpects(),testCase.getSb().toString());
     }
+
+
+
 
     @DataPoints
     public static TestCase[] testCases = createTestCases();
 
     private static TestCase[] createTestCases()  {
-        try{
+    try{
 
 
     ArrayList<TestCase> tests = new ArrayList<TestCase>();
@@ -112,57 +117,117 @@ public class BatchJobCallsEnhancersInCorrectOrder {
                     BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
                     BEFORE_LAST+BEFORE_EACH+"1"+AFTER_LAST+AFTER_EACH));
 
-        SimpleBatchAction<Integer, String> throwEx = SimpleBatchAction.<Integer, String, Exception>createWithEx(x -> {
-            throw new Exception();
-        });
+
+    SimpleBatchAction<Integer, String> throwEx = SimpleBatchAction.<Integer, String, Exception>createWithEx(x -> {
+        throw new Exception();
+    });
+    tests.add(new TestCase()
+            .desc("IteratorWith4_ExceptionOnSecond")
+            .withEnhancements(x->createWithDefault(x))
+            .forInput(1)
+            .addWriteToSbAction()
+            .add(throwEx)
+            .addWriteToSbAction()
+            .addWriteToSbAction()
+            .expect(BEFORE_FIRST+BEFORE_EACH+"1"+AFTER_FIRST+AFTER_EACH+BETWEEN+
+                    BEFORE_EACH+ON_EXCEPTION+AFTER_EACH+BETWEEN+
+                    BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
+                    BEFORE_LAST+BEFORE_EACH+"1"+AFTER_LAST+AFTER_EACH));
+
         tests.add(new TestCase()
-                .desc("IteratorWith4_ExceptionOnSecond")
+                .desc("IteratorWith4_ExceptionOnFirst")
                 .withEnhancements(x->createWithDefault(x))
                 .forInput(1)
-                .addWriteToSbAction()
                 .add(throwEx)
                 .addWriteToSbAction()
                 .addWriteToSbAction()
-                .expect(BEFORE_FIRST+BEFORE_EACH+"1"+AFTER_FIRST+AFTER_EACH+BETWEEN+
-                        BEFORE_EACH+ON_EXCEPTION+AFTER_EACH+BETWEEN+
+                .addWriteToSbAction()
+                .expect(BEFORE_FIRST+BEFORE_EACH+ON_EXCEPTION+AFTER_FIRST+AFTER_EACH+BETWEEN+
+                        BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
                         BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
                         BEFORE_LAST+BEFORE_EACH+"1"+AFTER_LAST+AFTER_EACH));
 
-            tests.add(new TestCase()
-                    .desc("IteratorWith4_ExceptionOnFirst")
-                    .withEnhancements(x->createWithDefault(x))
-                    .forInput(1)
-                    .add(throwEx)
-                    .addWriteToSbAction()
-                    .addWriteToSbAction()
-                    .addWriteToSbAction()
-                    .expect(BEFORE_FIRST+BEFORE_EACH+ON_EXCEPTION+AFTER_FIRST+AFTER_EACH+BETWEEN+
-                            BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
-                            BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
-                            BEFORE_LAST+BEFORE_EACH+"1"+AFTER_LAST+AFTER_EACH));
-            tests.add(new TestCase()
-                    .desc("IteratorWith4_ExceptionOnLast")
-                    .withEnhancements(x->createWithDefault(x))
-                    .forInput(1)
-                    .addWriteToSbAction()
-                    .addWriteToSbAction()
-                    .addWriteToSbAction()
-                    .add(throwEx)
-                    .expect(BEFORE_FIRST+BEFORE_EACH+"1"+AFTER_FIRST+AFTER_EACH+BETWEEN+
-                            BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
-                            BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
-                            BEFORE_LAST+BEFORE_EACH+ON_EXCEPTION+AFTER_LAST+AFTER_EACH));
-            TestCase[] asArray = new TestCase[tests.size()];
-            int i=0;
-            for (TestCase tcase :
-                    tests) {
-                asArray[i] = tcase;
-                i++;
-            }
-            return asArray;
-        }catch (Exception e){
-         throw new RuntimeException(e);
+        tests.add(new TestCase()
+                .desc("IteratorWith4_ExceptionOnLast")
+                .withEnhancements(x->createWithDefault(x))
+                .forInput(1)
+                .addWriteToSbAction()
+                .addWriteToSbAction()
+                .addWriteToSbAction()
+                .add(throwEx)
+                .expect(BEFORE_FIRST+BEFORE_EACH+"1"+AFTER_FIRST+AFTER_EACH+BETWEEN+
+                        BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
+                        BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
+                        BEFORE_LAST+BEFORE_EACH+ON_EXCEPTION+AFTER_LAST+AFTER_EACH));
+
+        tests.add( new TestCase()
+                .desc("IteratorWith4_skips3rdOnAfterEach")
+                .forInput(1)
+                .withEnhancements(sb->
+                   createWithDefault(sb)
+                    .afterEach(y->{
+                    if(y.getResult().equals("3")){
+                        y.skipAction();
+                    }else {
+                        sb.append(AFTER_EACH);
+                    }
+                }))
+                .addWriteToSbAction()
+                .addWriteToSbAction()
+                .add(x ->
+                        SimpleBatchAction.<Integer,String>create(i -> {
+                            x.append(3);
+                            return "3";
+                        })
+                )
+                .addWriteToSbAction()
+                .expect(BEFORE_FIRST+BEFORE_EACH+"1"+AFTER_FIRST+AFTER_EACH+BETWEEN+
+                        BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
+                        BEFORE_EACH+"3"+
+                        BEFORE_LAST+BEFORE_EACH+"1"+AFTER_LAST+AFTER_EACH));
+
+        tests.add( new TestCase()
+                .desc("IteratorWith4_breaks3rdOnAfterEach")
+                .forInput(1)
+                .withEnhancements(sb->
+                        createWithDefault(sb)
+                                .afterEach(y->{
+                                    if(y.getResult().equals("3")){
+                                        y.breakJob();
+                                    }else {
+                                        sb.append(AFTER_EACH);
+                                    }
+                                }))
+                .addWriteToSbAction()
+                .addWriteToSbAction()
+                .add(x ->
+                        SimpleBatchAction.<Integer,String>create(i -> {
+                            x.append(3);
+                            return "3";
+                        })
+                )
+                .addWriteToSbAction()
+                .expect(BEFORE_FIRST+BEFORE_EACH+"1"+AFTER_FIRST+AFTER_EACH+BETWEEN+
+                        BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
+                        BEFORE_EACH+"3"));
+
+
+
+        TestCase[] asArray = new TestCase[tests.size()];
+        int i=0;
+        for (TestCase tcase :
+                tests) {
+            asArray[i] = tcase;
+            i++;
         }
+        return asArray;
+    }catch (Exception e){
+     throw new RuntimeException(e);
+    }
+    }
+
+    public static class counter{
+        public int i=1;
     }
 
 
