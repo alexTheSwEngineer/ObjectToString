@@ -150,14 +150,14 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
     beforeEnhancement() throws BatchException {
         return  new FunctionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(false)
                 .add(skipNotAllowed)
-                .add(enhancer("beforeEach")
-                        .act(x->getBeforeEach().accept(x.get())))
                 .add(enhancer("beforeFIrst")
                     .when(c->c.isFirst())
                     .act(c-> getBeforeFirst().accept(c.get())))
                 .add(enhancer("beforeLast")
                     .when(c->c.isLast())
-                    .act(c->getBeforeLast().accept(c.get())));
+                    .act(c->getBeforeLast().accept(c.get())))
+                .add(enhancer("beforeEach")
+                        .act(x->getBeforeEach().accept(x.get())));
     }
 
     private  IBreakConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>
@@ -180,14 +180,14 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
                 .add(enhancer("breakAfter")
                      .breakAfterIf(c->c.get().breakAfterExecc()))
                 .add(skipNotAllowed)
-                .add(enhancer("afterall")
-                    .act(c-> getAfterEach().accept(c.get())))
                 .add(enhancer("afterFIrst")
                     .when(c->c.isFirst())
                     .act(c-> getAfterFirst().accept(c.get())))
                 .add(enhancer("afterLast")
                     .when(c->c.isLast())
                     .act(c-> getAfterLast().accept(c.get())))
+                .add(enhancer("afterall")
+                        .act(c-> getAfterEach().accept(c.get())))
                 .add(enhancer("between")
                     .when(c->c.isBetween())
                     .act(c-> getBetween().accept(c.get(),c.getNext())));

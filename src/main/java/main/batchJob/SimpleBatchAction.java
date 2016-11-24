@@ -49,7 +49,7 @@ public class SimpleBatchAction<Tin,Tout> implements IBatchAction<Tin,Tout> {
         });
     }
 
-    public static <Tin,Tout,Tex extends Exception> SimpleBatchAction<Tin,Tout> create(Function<Tin,Tout> f){
+    public static <Tin,Tout> SimpleBatchAction<Tin,Tout> create(Function<Tin,Tout> f){
         return new SimpleBatchAction<Tin, Tout>(x->{
             try{
                 return f.apply(x);
