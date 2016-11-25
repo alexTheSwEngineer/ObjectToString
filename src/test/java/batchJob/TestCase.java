@@ -5,6 +5,8 @@ import main.batchJob.JobEnhancements;
 import main.batchJob.SimpleBatchAction;
 import main.common.BatchException;
 import main.common.FunctionWithException;
+import main.itteration.IterationException;
+import main.itteration.Transformer;
 
 import java.util.ArrayList;
 
@@ -14,7 +16,7 @@ import java.util.ArrayList;
 public class TestCase {
     private String description;
     private ArrayList<SimpleBatchAction<Integer,String>> actions = new ArrayList<>();
-    private JobEnhancements<Integer, String, SimpleBatchAction<Integer, String>> enhancements;
+    private TestJobEnhancements enhancements;
 
     public String getExpects() {
         return expects;
@@ -53,7 +55,7 @@ public class TestCase {
     }
 
     public TestCase addWriteToSbAction(){
-        actions.add(SimpleBatchAction.<Integer, String>create(x -> {
+        actions.add(new SimpleBatchAction<Integer, String>().act(x -> {
             sb.append(x.toString());
             return x.toString();
         }));
@@ -73,12 +75,14 @@ public class TestCase {
     public String toString(){
         return  this.description;
     }
-    public <TEx extends Exception>  TestCase withEnhancements(FunctionWithException<StringBuilder,JobEnhancements<Integer,String,SimpleBatchAction<Integer,String>>,TEx> producer) throws TEx, BatchException {
+    public <TEx extends Exception>  TestCase withEnhancements(FunctionWithException<StringBuilder,TestJobEnhancements,TEx> producer) throws TEx, BatchException {
         this.enhancements = producer.accept(this.sb);
         return this;
     }
 
-    public void run() throws BatchException {
-        BatchJobExecution.<Integer,String,SimpleBatchAction<Integer,String>>Execute(actions.iterator(),input,enhancements.buildAsEnhancement());
+    public void run() throws BatchException, IterationException {
+        Transformer<SimpleBatchAction<Integer, String>, SimpleBatchAction<Integer, String>, Exception, Exception> iterator =
+        new Transformer<>(actions.iterator(), x -> x);
+        BatchJobExecution.<Integer,String,SimpleBatchAction<Integer,String>,Exception>Execute(iterator,input,enhancements.buildAsEnhancement());
     }
 }

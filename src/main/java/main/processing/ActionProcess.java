@@ -13,13 +13,13 @@ import java.util.List;
 /**
  * @author Aleksandar
  */
-public class FunctionProcess<Tin> implements IBreakConsumer<Tin>
+public class ActionProcess<Tin> implements IBreakConsumer<Tin>
 {
     private List<IBreakConsumer<Tin>> actions = new ArrayList<IBreakConsumer<Tin>>();
     private boolean shouldBreak = false;
     private boolean breakPropagates = false;
 
-    public FunctionProcess(Boolean breakPropagates) {
+    public ActionProcess(Boolean breakPropagates) {
         this.breakPropagates=breakPropagates;
     }
     public boolean breakBeforeExec() throws BatchException {
@@ -35,7 +35,7 @@ public class FunctionProcess<Tin> implements IBreakConsumer<Tin>
     }
 
 
-    public FunctionProcess<Tin> add(IBreakConsumer<Tin> action) throws BatchException {
+    public ActionProcess<Tin> add(IBreakConsumer<Tin> action) throws BatchException {
         actions.add(action);
         return this;
     }
@@ -71,11 +71,9 @@ public class FunctionProcess<Tin> implements IBreakConsumer<Tin>
                 break;
             }
 
-            if(!action.allowExec(input)){
-                continue;
+            if(action.allowExec(input)){
+                action.accept(input);
             }
-
-            action.accept(input);
 
             if(action.breakAfterExecc(input)){
                 this.shouldBreak=true;

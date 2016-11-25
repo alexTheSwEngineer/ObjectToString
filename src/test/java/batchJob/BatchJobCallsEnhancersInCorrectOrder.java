@@ -3,6 +3,7 @@ import main.batchJob.BatchJobExecution;
 import main.batchJob.JobEnhancements;
 import main.batchJob.SimpleBatchAction;
 import main.common.BatchException;
+import main.itteration.IterationException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.theories.DataPoint;
@@ -34,14 +35,14 @@ public class BatchJobCallsEnhancersInCorrectOrder {
 
 
     public static SimpleBatchAction<Integer, String> createWriteToSbAction(StringBuilder sb){
-        return SimpleBatchAction.<Integer, String>create(x -> {
+        return new SimpleBatchAction<Integer, String>().act(x -> {
             sb.append(x.toString());
             return x.toString();
         });
     }
 
-    public static JobEnhancements<Integer,String,SimpleBatchAction<Integer,String>> createWithDefault(StringBuilder sb) throws BatchException {
-        return  new JobEnhancements<Integer,String,SimpleBatchAction<Integer,String>>()
+    public static TestJobEnhancements createWithDefault(StringBuilder sb) throws BatchException {
+        return  new TestJobEnhancements()
         .afterEach(x->sb.append(AFTER_EACH))
         .afterFirst(x->sb.append(AFTER_FIRST))
         .afterLast(x->sb.append(AFTER_LAST))
@@ -53,7 +54,7 @@ public class BatchJobCallsEnhancersInCorrectOrder {
     }
 
     @Theory
-    public void runTest(TestCase testCase) throws BatchException {
+    public void runTest(TestCase testCase) throws BatchException, IterationException {
         testCase.run();
         Assert.assertEquals(testCase.toString(),testCase.getExpects(),testCase.getSb().toString());
     }
@@ -118,7 +119,7 @@ public class BatchJobCallsEnhancersInCorrectOrder {
                     BEFORE_LAST+BEFORE_EACH+"1"+AFTER_LAST+AFTER_EACH));
 
 
-    SimpleBatchAction<Integer, String> throwEx = SimpleBatchAction.<Integer, String, Exception>createWithEx(x -> {
+    SimpleBatchAction<Integer, String> throwEx = new SimpleBatchAction<Integer, String>().<Exception>actsWithEx(x -> {
         throw new Exception();
     });
     tests.add(new TestCase()
@@ -175,10 +176,10 @@ public class BatchJobCallsEnhancersInCorrectOrder {
                 .addWriteToSbAction()
                 .addWriteToSbAction()
                 .add(x ->
-                        SimpleBatchAction.<Integer,String>create(i -> {
-                            x.append(3);
-                            return "3";
-                        })
+                    new SimpleBatchAction<Integer,String>().act(i -> {
+                        x.append(3);
+                        return "3";
+                    })
                 )
                 .addWriteToSbAction()
                 .expect(BEFORE_FIRST+BEFORE_EACH+"1"+AFTER_FIRST+AFTER_EACH+BETWEEN+
@@ -190,18 +191,18 @@ public class BatchJobCallsEnhancersInCorrectOrder {
                 .desc("IteratorWith4_breaks3rdOnAfterEach")
                 .forInput(1)
                 .withEnhancements(sb->
-                        createWithDefault(sb)
-                                .afterEach(y->{
-                                    if(y.getResult().equals("3")){
-                                        y.breakJob();
-                                    }else {
-                                        sb.append(AFTER_EACH);
-                                    }
-                                }))
+                createWithDefault(sb)
+                        .afterEach(y->{
+                            if(y.getResult().equals("3")){
+                                y.breakJob();
+                            }else {
+                                sb.append(AFTER_EACH);
+                            }
+                        }))
                 .addWriteToSbAction()
                 .addWriteToSbAction()
                 .add(x ->
-                        SimpleBatchAction.<Integer,String>create(i -> {
+                        new SimpleBatchAction<Integer,String>().act(i -> {
                             x.append(3);
                             return "3";
                         })
@@ -210,6 +211,7 @@ public class BatchJobCallsEnhancersInCorrectOrder {
                 .expect(BEFORE_FIRST+BEFORE_EACH+"1"+AFTER_FIRST+AFTER_EACH+BETWEEN+
                         BEFORE_EACH+"1"+AFTER_EACH+BETWEEN+
                         BEFORE_EACH+"3"));
+
 
 
 

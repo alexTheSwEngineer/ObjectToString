@@ -1,13 +1,12 @@
 package examples;
 
-import main.batchJob.JobEnhancements;
-import main.batchJob.interfaces.IBatchAction;
-import main.batchJob.interfaces.IBatchActionExecution;
-import main.common.BatchException;
-import main.itteration.Chain;
-import main.processing.IBreakConsumer;
-import objectToString.Property;
+import main.batchJob.SimpleBatchAction;
+import objectToString.ExtractPropertyAction;
+import objectToString.ObjectPrintSettings;
 import objectToString.PropertyPrintSetting;
+
+import java.util.ArrayList;
+import java.util.function.Function;
 
 /**
  * Created by atrposki on 11/15/2016.
@@ -15,34 +14,58 @@ import objectToString.PropertyPrintSetting;
 public class Main {
     public static void main(String[] args) throws Exception {
 
-        Iterable<IBatchAction<VeryComplexObject, Property>> minimalPrintSettings =
+        //OBJECT PRINTING
+        Iterable<ExtractPropertyAction<VeryComplexObject>> propertySettings =
         new PropertyPrintSetting<VeryComplexObject>(x -> x.property)
-        .name("NameOfProperty")
+        .name("HardCoddedNameOfProperty")
         .property(x -> x.computedProperty())
         .name(x -> "computed name of object" + x.toString())
         .property(x -> x.onlyValueNoNamePrinted)
         .name("")
         .buildObjectPrintJob();
 
-
-        JobEnhancements<VeryComplexObject, Property, IBatchAction<VeryComplexObject, Property>> printToCOnsole = new JobEnhancements<VeryComplexObject, Property, IBatchAction<VeryComplexObject, Property>>()
+        ObjectPrintSettings<VeryComplexObject> objectPrintSettings = new ObjectPrintSettings<VeryComplexObject>()
         .beforeFirst(x -> System.out.println("AWESOME HEADER"))
         .between((l, r) -> System.out.print(","))
         .afterEach(x -> System.out.print(x.getResult().getValue()))
         .onException(x -> x.breakJob());
 
+        VeryComplexObject objectToPrint = new VeryComplexObject();
+        objectPrintSettings.execute(propertySettings.iterator(),objectToPrint);
 
-        printToCOnsole.execute(minimalPrintSettings,new VeryComplexObject());
+        //Complex actions of large stream that cannot possibly be in memmory at once:
+
+        IntegerToActionTransformer isDivisableActions = createManyActions();
+
+        Counter devisableByInput = new Counter();
+        new IntegerToBooleanJobSettings()
+            .beforeEach(x-> System.out.print(","))
+            .afterEach(x->{
+                if(x.getResult()){
+                    devisableByInput.increment();
+                }
+            })
+            .execute(isDivisableActions,13);
+
+        System.out.println();
+        System.out.println(devisableByInput.getCount());
 
 
     }
 
+    private static IntegerToActionTransformer createManyActions(){
+        ArrayList<Integer> largeArray = new ArrayList<Integer>();
+        for (int i = 1; i < 1200000; i++) {
+            largeArray.add(i);
+        }
 
-    private static void  pl(String str){
-        System.out.println(str);
+        Counter divisableByInput=new Counter();
+       return new IntegerToActionTransformer(largeArray.iterator(),
+                                        valueToTransform->{
+                                            return new SimpleBatchAction<Integer,Boolean>()
+                                                    .act(divisor->valueToTransform%divisor==0);
+                                        });
     }
-    private static  void  p(String str){
-        System.out.print(str);
-    }
+
 }
 

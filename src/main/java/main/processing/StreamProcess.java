@@ -6,6 +6,7 @@
 package main.processing;
 
 import main.common.BatchException;
+import main.itteration.IterationException;
 import main.itteration.IteratorWithException;
 
 /**
@@ -41,17 +42,20 @@ public class StreamProcess implements IStreamableAction {
     @Override
     public void execute() throws BatchException {
         while (iterator.hasNext()){
-            IStreamableAction action = iterator.next();
+            IStreamableAction action = null;
+            try {
+                action = iterator.next();
+            } catch (IterationException e) {
+                throw new BatchException(e);
+            }
             if(action.breakBeforeExec()){
                 this.shouldBreak=true;
                 break;
             }
 
-            if(!action.allowExec()){
-                continue;
+            if(action.allowExec()){
+                action.execute();
             }
-
-            action.execute();
 
             if(action.breakAfterExecc()){
                 this.shouldBreak=true;

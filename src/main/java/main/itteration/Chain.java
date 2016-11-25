@@ -14,8 +14,8 @@ public class Chain<T,TEx extends Exception> {
     private Optional<T> next;
     private IteratorWithException<Optional<T>,TEx> itr;
 
-    public Chain(IteratorWithException<T,TEx> inputItr) throws TEx {
-        itr = new Transformer<T,Optional<T>,TEx>(inputItr, this::optionalOfT);
+    public Chain(IteratorWithException<T,TEx> inputItr) throws TEx, IterationException {
+        itr = new Transformer<T,Optional<T>,TEx,TEx>(inputItr, this::optionalOfT);
         if (inputItr.hasNext()) {
             current = Optional.ofNullable(inputItr.next());
         }
@@ -25,7 +25,7 @@ public class Chain<T,TEx extends Exception> {
     }
 
     public Chain(Iterator<T> inputItr) {
-        itr =new Transformer<T,Optional<T>,TEx>(inputItr,this::optionalOfT);
+        itr =new Transformer<T,Optional<T>,TEx,TEx>(inputItr,this::optionalOfT);
         if (inputItr.hasNext()) {
             current = Optional.ofNullable(inputItr.next());
         }
@@ -66,7 +66,7 @@ public class Chain<T,TEx extends Exception> {
         return next.orElse(null);
     }
 
-    public Chain<T,TEx> move() throws TEx {
+    public Chain<T,TEx> move() throws TEx, IterationException {
 
         prev = current;
         current = next;

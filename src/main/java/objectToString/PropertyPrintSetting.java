@@ -46,8 +46,8 @@ public class PropertyPrintSetting<TSource> {
         return name(x->nameStr);
     }
 
-    public Iterable<IBatchAction<TSource,Property>> buildObjectPrintJob() throws BatchException {
-        List<IBatchAction<TSource,Property>> res = new LinkedList<>();
+    public Iterable<ExtractPropertyAction<TSource>> buildObjectPrintJob() throws BatchException {
+        List<ExtractPropertyAction<TSource>> res = new LinkedList<>();
         PropertyPrintSetting<TSource> current = this;
         while (current!=null){
             res.add(current.createAction());
@@ -70,8 +70,8 @@ public class PropertyPrintSetting<TSource> {
     }
 
     private static <TSource> String empty(TSource source){return "";}
-    private IBatchAction<TSource,Property> createAction(){
-        return  new IBatchAction<TSource, Property>() {
+    private ExtractPropertyAction<TSource> createAction(){
+        return  new ExtractPropertyAction<TSource>() {
             @Override
             public boolean allow(TSource input) {
                 return true;

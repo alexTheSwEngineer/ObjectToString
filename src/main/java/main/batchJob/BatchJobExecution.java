@@ -3,6 +3,8 @@ package main.batchJob;
 import main.batchJob.interfaces.IBatchAction;
 import main.batchJob.interfaces.IBatchActionExecution;
 import main.common.FunctionWithException;
+import main.itteration.IterationException;
+import main.itteration.IteratorWithException;
 import main.processing.IBreakConsumer;
 import main.common.BatchException;
 import main.itteration.Chain;
@@ -22,8 +24,8 @@ public class BatchJobExecution<Tin, Tout, TAction extends IBatchAction<Tin, Tout
         this.enhancer = enhancer;
     }
 
-    public void execute(Tin input) throws BatchException {
-        Execute(actions, input, enhancer);
+    public void execute(Tin input) throws BatchException, IterationException {
+        Execute(new Transformer<TAction,TAction,Exception, Exception>( actions,x->x), input, enhancer);
     }
 
     public static <Tin, Tout, TAction extends IBatchAction<Tin, Tout>> void Execute(Iterable<TAction> actions, Tin input) throws BatchException {
@@ -47,15 +49,15 @@ public class BatchJobExecution<Tin, Tout, TAction extends IBatchAction<Tin, Tout
 
     }
 
-    public static <Tin, Tout, TAction extends IBatchAction<Tin, Tout>> void Execute(Iterator<TAction> actions, Tin input, IBreakConsumer<Chain<IBatchActionExecution<Tin, Tout, TAction>, BatchException>> enhancer) throws BatchException {
+    public static <Tin, Tout, TAction extends IBatchAction<Tin, Tout>,ItrEx extends Exception> void Execute(IteratorWithException<TAction,ItrEx> actions, Tin input, IBreakConsumer<Chain<IBatchActionExecution<Tin, Tout, TAction>, BatchException>> enhancer) throws BatchException, IterationException {
         if (!actions.hasNext()) {
             return;
         }
 
-        Transformer<TAction, IBatchActionExecution<Tin, Tout, TAction>, BatchException> iterator =
-                new Transformer<>(actions, createBatchActionCall(input));
+        Transformer<TAction,IBatchActionExecution<Tin,Tout,TAction>,ItrEx,BatchException> actionCallIterator=
+        new Transformer<TAction,IBatchActionExecution<Tin,Tout,TAction>,ItrEx,BatchException>(actions,createBatchActionCall(input));
         Chain<IBatchActionExecution<Tin, Tout, TAction>, BatchException> chain =
-                new Chain<IBatchActionExecution<Tin, Tout, TAction>, BatchException>(iterator);
+        new Chain<IBatchActionExecution<Tin, Tout, TAction>, BatchException>(actionCallIterator);
         for (; chain.isPresent(); chain.move()) {
             if (enhancer.breakBeforeExec(chain)) {
                 break;
@@ -73,8 +75,8 @@ public class BatchJobExecution<Tin, Tout, TAction extends IBatchAction<Tin, Tout
     }
 
     public static <Tin, Tout, TAction extends IBatchAction<Tin, Tout>> FunctionWithException<TAction, IBatchActionExecution<Tin, Tout, TAction>, BatchException>
-    createBatchActionCall(Tin input) {
-        return x -> new BatchActionCall<Tin, Tout, TAction>(x, input);
+    createBatchActionCall(Tin input)  {
+        return x-> new BatchActionCall<Tin,Tout,TAction>(x,input);
     }
 
 

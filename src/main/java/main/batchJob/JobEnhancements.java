@@ -9,24 +9,29 @@ import main.actionsWithBatchException.BatchConsumer;
 import main.batchJob.interfaces.IBatchAction;
 import main.batchJob.interfaces.IBatchActionExecution;
 import main.common.FunctionWithException;
+import main.itteration.IterationException;
+import main.itteration.IteratorWithException;
+import main.itteration.Transformer;
 import main.processing.IBreakConsumer;
 import main.common.BatchException;
 import main.itteration.Chain;
-import main.processing.FunctionProcess;
+import main.processing.ActionProcess;
+
+import java.util.Iterator;
 
 /**
  *
  * @author Aleksandar
  */
-public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
-    private BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> afterEach  = JobEnhancements::empty;
-    private BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> beforeFirst  = JobEnhancements::empty;
-    private BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> afterFirst  = JobEnhancements::empty;
-    private BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> beforeLast = JobEnhancements::empty;
-    private BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> afterLast  = JobEnhancements::empty;
-    private BatchBiConsumer<IBatchActionExecution<Tin, Tout, TAction>> between= JobEnhancements::empty;
-    private BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> onException = JobEnhancements::empty;
-    private BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> beforeEach =JobEnhancements::empty;
+public abstract class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>,TCrpt extends JobEnhancements<Tin,Tout,TAction,TCrpt>> {
+    protected BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> afterEach  = JobEnhancements::empty;
+    protected BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> beforeFirst  = JobEnhancements::empty;
+    protected BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> afterFirst  = JobEnhancements::empty;
+    protected BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> beforeLast = JobEnhancements::empty;
+    protected BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> afterLast  = JobEnhancements::empty;
+    protected BatchBiConsumer<IBatchActionExecution<Tin, Tout, TAction>> between= JobEnhancements::empty;
+    protected BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> onException = JobEnhancements::empty;
+    protected BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> beforeEach =JobEnhancements::empty;
 
 
 
@@ -61,7 +66,7 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
         return onException;
     }
 
-    public JobEnhancements() throws BatchException {
+    protected JobEnhancements() throws BatchException {
         this.afterEach  = JobEnhancements::empty;
         this.beforeFirst  = JobEnhancements::empty;
         this.afterFirst  = JobEnhancements::empty;
@@ -71,7 +76,7 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
         this.onException = JobEnhancements::empty;
         this.beforeEach = JobEnhancements::empty;
     }
-    public JobEnhancements(JobEnhancements<Tin,Tout,TAction> other) throws BatchException {
+    protected JobEnhancements(JobEnhancements<Tin,Tout,TAction,TCrpt> other) throws BatchException {
         this.afterEach=other.afterEach;
         this.beforeFirst=other.beforeFirst;
         this.afterFirst=other.afterFirst;
@@ -83,47 +88,48 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
     }
 
 
+    public abstract TCrpt copy() throws BatchException;
 
 
 
-    public JobEnhancements<Tin,Tout,TAction> beforeFirst(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
-        JobEnhancements<Tin,Tout,TAction> newJob = new JobEnhancements<Tin, Tout, TAction>(this);
+    public TCrpt beforeFirst(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
+        TCrpt newJob = this.copy();
         newJob.beforeFirst=f;
         return newJob;
     }
-    public JobEnhancements<Tin,Tout,TAction> beforeLast(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
-        JobEnhancements<Tin,Tout,TAction> newJob = new JobEnhancements<Tin, Tout, TAction>(this);
+    public TCrpt beforeLast(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
+        TCrpt newJob = this.copy();
         newJob.beforeLast=f;
         return newJob;
     }
-    public JobEnhancements<Tin,Tout,TAction> afterEach(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
-        JobEnhancements<Tin,Tout,TAction> newJob = new JobEnhancements<Tin, Tout, TAction>(this);
+    public TCrpt afterEach(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
+        TCrpt newJob = this.copy();
         newJob.afterEach=f;
         return newJob;
     }
-    public JobEnhancements<Tin,Tout,TAction> afterFirst(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
-        JobEnhancements<Tin,Tout,TAction> newJob = new JobEnhancements<Tin, Tout, TAction>(this);
+    public TCrpt afterFirst(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
+        TCrpt newJob = this.copy();
         newJob.afterFirst=f;
         return newJob;
     }
-    public JobEnhancements<Tin,Tout,TAction> afterLast(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
-        JobEnhancements<Tin,Tout,TAction> newJob = new JobEnhancements<Tin, Tout, TAction>(this);
+    public TCrpt afterLast(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
+        TCrpt newJob = this.copy();
         newJob.afterLast=f;
         return newJob;
     }
-    public JobEnhancements<Tin,Tout,TAction> onException(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
-        JobEnhancements<Tin,Tout,TAction> newJob = new JobEnhancements<Tin, Tout, TAction>(this);
+    public TCrpt onException(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
+        TCrpt newJob = this.copy();
         newJob.onException=f;
         return newJob;
     }
-    public JobEnhancements<Tin,Tout,TAction> between(BatchBiConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
-        JobEnhancements<Tin,Tout,TAction> newJob = new JobEnhancements<Tin, Tout, TAction>(this);
+    public TCrpt between(BatchBiConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
+        TCrpt newJob = this.copy();
         newJob.between=f;
         return newJob;
     }
 
     public IBreakConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>> buildAsEnhancement() throws BatchException {
-        return new FunctionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(true)
+        return new ActionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(true)
                 .add(beforeEnhancement())
                 .add(executeEnhancment())
                 .add(afterEnhancement())
@@ -131,9 +137,20 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
                         .breakAfterIf(c->c.get().breakAfterExecc()||c.get().breakBeforeExec()));
     }
 
-    public JobEnhancements<Tin,Tout,TAction> execute(Iterable<TAction> actions,Tin input) throws BatchException {
-          BatchJobExecution.Execute(actions.iterator(),input,buildAsEnhancement());
-        return this;
+    public <exType extends Exception>TCrpt execute(Iterator<TAction> actionsIterator, Tin input) throws BatchException, IterationException {
+        BatchJobExecution.Execute(new Transformer<TAction,TAction,Exception,Exception>(actionsIterator,x->x),input,buildAsEnhancement());
+        return (TCrpt) this;
+    }
+
+    public <exType extends Exception>TCrpt execute(IteratorWithException<TAction,exType> actionsIterator, Tin input) throws BatchException, IterationException {
+          BatchJobExecution.Execute(actionsIterator,input,buildAsEnhancement());
+        return (TCrpt) this;
+    }
+
+    public JobEnhancements<Tin, Tout, TAction,TCrpt> beforeEach(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
+        TCrpt newJob = this.copy();
+        newJob.beforeEach = f;
+        return newJob;
     }
 
     private static <Tin,Tout,TAction extends FunctionWithException<Tin,Tout,BatchException>>
@@ -145,7 +162,7 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
 
 
     private IBreakConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>> skipNotAllowed =
-            new FunctionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(true)
+            new ActionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(true)
                     .add(enhancer("SkipIfNorAllowed")
                         .breakBeforeIf(c->!c.isPresent())
                         .breakBeforeIf(c->!c.get().allowExec())
@@ -153,7 +170,7 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
 
     private  IBreakConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>
     beforeEnhancement() throws BatchException {
-        return  new FunctionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(false)
+        return  new ActionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(false)
                 .add(skipNotAllowed)
                 .add(enhancer("beforeFIrst")
                     .when(c->c.isFirst())
@@ -177,7 +194,7 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
 
     private  IBreakConsumer<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>
     afterEnhancement() throws BatchException {
-        return new FunctionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(false)
+        return new ActionProcess<Chain<IBatchActionExecution<Tin,Tout,TAction>,BatchException>>(false)
                 .add(enhancer("onException")
                     .when(c->c.get().getException()!=null)
                     .act(c->onException.accept(c.get()))
@@ -204,11 +221,6 @@ public class JobEnhancements<Tin,Tout,TAction extends IBatchAction<Tin,Tout>> {
     }
 
 
-    public JobEnhancements<Tin, Tout, TAction> beforeEach(BatchConsumer<IBatchActionExecution<Tin, Tout, TAction>> f) throws BatchException {
-        JobEnhancements<Tin,Tout,TAction> newJob = new JobEnhancements<Tin, Tout, TAction>(this);
-        newJob.beforeEach = f;
-        return newJob;
-    }
 }
 
 
